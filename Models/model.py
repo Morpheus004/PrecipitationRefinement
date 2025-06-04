@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from ConvLSTM import ConvLSTMCell
+from .Model_components import ConvLSTMCell
 
 class RefinementModel(nn.Module):
     """

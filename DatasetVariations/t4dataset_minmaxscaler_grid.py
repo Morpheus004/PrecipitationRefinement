@@ -4,23 +4,19 @@ import torch
 import numpy as np
 import pandas as pd
 
-class T4DatasetMinMaxScalerOverall(Dataset):
+class T4DatasetMinMaxScalerGrid(Dataset):
     """
     Pytorch Dataset for mapping timesteps of IMERG and gencast for T-4 Timesteps forecast of each event.
     """
-    def __init__(self,mapping,data,step=25,initialize_global_min_max=False,global_max=0):
+    def __init__(self,mapping,data,step=25):
         """
         Args:
             mapping(dict): Dictionary mapping of IMERG to prediction file paths.
-            initialize_global_min_max(Bool): True will calculate max value on the dataset provided
         """
         self.file_mapping=mapping
         self.index=[]
         self.data=data
-        self.initialize_global_min_max=initialize_global_min_max
-        self.max=global_max
-        self.epsilon = 1e-8  # to prevent division by zero
-        
+
         if data=='forecast':
             for imerg_file, pred_file in self.file_mapping.items():
                 self._process_file_pair(imerg_file, pred_file,step=step)
@@ -38,8 +34,6 @@ class T4DatasetMinMaxScalerOverall(Dataset):
                 # pred_data=xr.open_dataset(pred_file_path)
 
                 pred_times=pred_data.time.values
-                if self.max < pred_data['total_precipitation_12hr'].max().item() and self.initialize_global_min_max==True:
-                    self.max = pred_data['total_precipitation_12hr'].max().item()*1000
                 if 'sample' in pred_data.coords:
                     for num_sample in range(pred_data.sample.size):
                         for i in range(len(pred_times)-1):
@@ -93,18 +87,8 @@ class T4DatasetMinMaxScalerOverall(Dataset):
                 pred = pred_data.isel(time=slice(sample_info['current_pred_idx'],sample_info['next_pred_idx']+1),batch=0).sel(lat=slice(5,40), lon=slice(60,100))*1000
 
             imerg = imerg_data.isel(time=slice(sample_info['current_imerg_idx'],sample_info['next_imerg_idx']+1)).transpose('time','lat','lon').sel(lat=slice(5,40), lon=slice(60,100))
-            
-            pred_tensor = torch.tensor(pred['total_precipitation_12hr'].values.astype(np.float32)).unsqueeze(1)
-            imerg_tensor = torch.tensor(imerg.precipitation.values.astype(np.float32)).unsqueeze(1)
-            
-            if self.initialize_global_min_max and self.max > 0:
-                pred_tensor = pred_tensor / (self.max + self.epsilon)
-                imerg_tensor = imerg_tensor / (self.max + self.epsilon)
-            elif self.max > 0:
-                pred_tensor = pred_tensor / (self.max + self.epsilon)
-                imerg_tensor = imerg_tensor / (self.max + self.epsilon)
-            else:
-                raise ValueError("Value of max is 0")
 
-            return pred_tensor, imerg_tensor
-            # return pred_data_tensor/self.max,imerg_data_tensor/self.max
+            pred_data_tensor = torch.tensor(pred['total_precipitation_12hr'].values.astype(np.float32)).unsqueeze(1)
+            imerg_data_tensor = torch.tensor(imerg.precipitation.values.astype(np.float32)).unsqueeze(1)
+
+            return pred_data_tensor,imerg_data_tensor
