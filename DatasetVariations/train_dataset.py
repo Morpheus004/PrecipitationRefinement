@@ -2,6 +2,7 @@ from torch.utils.data import Dataset
 import xarray as xr
 import torch
 import numpy as np
+import sys
 from tqdm import tqdm
 
 class TrainDataset(Dataset):
@@ -43,7 +44,7 @@ class TrainDataset(Dataset):
                 self.max_values = None
 
         # Process all files and calculate scaling values
-        for imerg_file, pred_file in tqdm(self.file_mapping.items(), desc="Processing files"):
+        for imerg_file, pred_file in tqdm(self.file_mapping.items(), desc="Processing files",file=sys.stdout):
             self._process_file_pair(imerg_file, pred_file, window_size)
 
         # Set final scaling values

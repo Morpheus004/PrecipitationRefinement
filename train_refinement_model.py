@@ -8,6 +8,7 @@ import numpy as np
 import random
 import copy
 from logger_config import logger
+import tempfile
 
 def set_seed(seed):
     """
@@ -23,7 +24,7 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-def train_refinement_model(model, train_loader, val_loader=None, 
+def train_refinement_model(model,logger, train_loader, val_loader=None, 
                           num_epochs=30, learning_rate=0.001,
                           device='cuda' if torch.cuda.is_available() else 'cpu', 
                           already_trained=False, checkpoint_path=None,
@@ -202,9 +203,14 @@ def train_refinement_model(model, train_loader, val_loader=None,
                         'best_train_loss': avg_train_loss,
                         'best_epoch': best_epoch
                     }
-                    # Log best model directly to MLflow
-                    mlflow.pytorch.log_state_dict(best_model_state, f"best_model_state")
-                    mlflow.log_dict(best_checkpoint, f"best_model_checkpoint.json")
+                    # Save best model checkpoint using torch.save
+                    temp_filename = f"best_model_epoch_{epoch+1}.pth"
+                    with tempfile.NamedTemporaryFile(suffix='.pth', prefix=temp_filename, delete=False) as tmp:
+                        torch.save(best_checkpoint, tmp.name)
+                        # Log to MLflow
+                        mlflow.log_artifact(tmp.name, f"best_model_checkpoint")
+                    # Clean up temporary file
+                    os.unlink(tmp.name)
                     logger.info(f"New best model saved at epoch {epoch+1} with val_loss: {avg_val_loss:.6f}")
                 else:
                     epochs_without_improvement += 1
@@ -231,9 +237,13 @@ def train_refinement_model(model, train_loader, val_loader=None,
                         'best_train_loss': best_train_loss,
                         'best_epoch': best_epoch
                     }
-                    # Log best model directly to MLflow
-                    mlflow.pytorch.log_state_dict(best_model_state, f"best_model_state")
-                    mlflow.log_dict(best_checkpoint, f"best_model_checkpoint.json")
+                    temp_filename = f"best_model_epoch_{epoch+1}.pth"
+                    with tempfile.NamedTemporaryFile(suffix='.pth', prefix=temp_filename, delete=False) as tmp:
+                        torch.save(best_checkpoint, tmp.name)
+                        # Log to MLflow
+                        mlflow.log_artifact(tmp.name, f"best_model_checkpoint")
+                    # Clean up temporary file
+                    os.unlink(tmp.name)
                     logger.info(f"New best model saved at epoch {epoch+1} with train_loss: {avg_train_loss:.6f}")
                 else:
                     epochs_without_improvement += 1
@@ -251,18 +261,24 @@ def train_refinement_model(model, train_loader, val_loader=None,
                     'best_train_loss': best_train_loss,
                     'best_epoch': best_epoch
                 }
-                # Log checkpoint directly to MLflow
-                mlflow.log_dict(checkpoint, f"checkpoints/checkpoint{epoch}.json")
+                # Save checkpoint using torch.save
+                temp_filename = f"checkpoint_epoch_{epoch+1}.pth"
+                with tempfile.NamedTemporaryFile(suffix='.pth', prefix=temp_filename, delete=False) as tmp:
+                    torch.save(checkpoint, tmp.name)
+                    # Log to MLflow
+                    mlflow.log_artifact(tmp.name, f"checkpoints")
+                # Clean up temporary file
+                os.unlink(tmp.name)
         
         # Log final model (current state)
-        mlflow.pytorch.log_model(model, f"final_model", input_example=train_loader.dataset[0][0].unsqueeze(0))
+        mlflow.pytorch.log_model(model, f"final_model", input_example=train_loader.dataset[0][0].unsqueeze(0).cpu().numpy())
         
         # Load and log best model
         if best_model_state is not None:
             # Create a new model instance and load best weights
             best_model = type(model)()  # Create new instance of same model class
             best_model.load_state_dict(best_model_state)
-            mlflow.pytorch.log_model(best_model, "best_model")
+            mlflow.pytorch.log_model(best_model, "best_model",input_example=train_loader.dataset[0][0].unsqueeze(0).cpu().numpy())
         
         # Log final metrics
         mlflow.log_metric("final_train_loss", history['train_loss'][-1])

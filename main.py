@@ -23,7 +23,7 @@ from logger_config import logger
 # Set MLflow tracking URI (optional - if you want to use a specific server)
 # mlflow.set_tracking_uri("http://localhost:5000")  # Uncomment if using MLflow server
 
-def main():
+def main(logger):
     start_time = time.time()
     
     logger.info("Starting data preparation...")
@@ -98,6 +98,7 @@ def main():
     # Train model with MLflow tracking
     model, optimizer, history, num_epochs = train_refinement_model(
         model, 
+        logger,
         train_loader, 
         val_loader, 
         num_epochs=50,
@@ -110,4 +111,4 @@ def main():
     logger.info(f"Training completed. Total execution time: {elapsed_time:.4f} seconds")
     
 if __name__ == "__main__":
-    main()
+    main(logger)
