@@ -1,5 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=gencast
+#SBATCH --job-name=convlstm
+#SBATCH --error=model_training.log
+#SBATCH --output=model_training.log
 #SBATCH --nodes=1 
 #SBATCH --mem=50G
 #SBATCH --time=20:00:00
@@ -14,4 +16,5 @@ module load cuda/12.0
 
 eval "$(conda shell.bash hook)"
 conda activate ug
-python /scratch/IITB/monsoon_lab/24d1236/pratham/Model/main.py > model_training.log 2>&1
+python /scratch/IITB/monsoon_lab/24d1236/pratham/Model/main.py
+sed -i 's/\r/\n/g' /scratch/IITB/monsoon_lab/24d1236/pratham/Model/model_training.log
