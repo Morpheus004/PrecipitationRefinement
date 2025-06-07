@@ -271,14 +271,14 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
                 os.unlink(tmp.name)
         
         # Log final model (current state)
-        mlflow.pytorch.log_model(model, f"final_model", input_example=train_loader.dataset[0][0].unsqueeze(0).cpu().numpy())
+        mlflow.pytorch.log_model(model, f"final_model", input_example=train_loader.dataset[0][0].unsqueeze(0).detach().numpy())
         
         # Load and log best model
         if best_model_state is not None:
             # Create a new model instance and load best weights
             best_model = type(model)()  # Create new instance of same model class
             best_model.load_state_dict(best_model_state)
-            mlflow.pytorch.log_model(best_model, "best_model",input_example=train_loader.dataset[0][0].unsqueeze(0).cpu().numpy())
+            mlflow.pytorch.log_model(best_model, "best_model",input_example=train_loader.dataset[0][0].unsqueeze(0).detach().numpy())
         
         # Log final metrics
         mlflow.log_metric("final_train_loss", history['train_loss'][-1])
@@ -293,5 +293,6 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
         
         # Log training history directly to MLflow
         mlflow.log_dict(history, "training_artifacts/training_history.json")
+        mlflow.log_artifact('/scratch/IITB/monsoon_lab/24d1236/pratham/Model/model_training.log',"Logs")
     
     return model, optimizer, history, num_epochs
