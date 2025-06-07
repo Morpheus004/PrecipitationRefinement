@@ -6,6 +6,7 @@ import mlflow
 import mlflow.pytorch
 import numpy as np
 import random
+import copy
 
 def set_seed(seed):
     """
@@ -22,7 +23,7 @@ def set_seed(seed):
     torch.backends.cudnn.benchmark = False
 
 def train_refinement_model(model, train_loader, val_loader=None, 
-                          num_epochs=30, learning_rate=0.001,checkpoint_save_dir=None, 
+                          num_epochs=30, learning_rate=0.001,
                           device='cuda' if torch.cuda.is_available() else 'cpu', 
                           already_trained=False, checkpoint_path=None,
                           experiment_name="precipitation_refinement", run_name=None,
@@ -85,9 +86,6 @@ def train_refinement_model(model, train_loader, val_loader=None,
         if val_loader:
             mlflow.log_param("val_dataset_size", len(val_loader.dataset))
         mlflow.log_param("random_seed", seed)
-        
-        if checkpoint_save_dir is None:
-            print("No checkpoint saving")
         
         if already_trained and checkpoint_path is None:
             raise Exception("Checkpoint path has to be specified if already_trained is True")
@@ -182,27 +180,27 @@ def train_refinement_model(model, train_loader, val_loader=None,
                 if avg_val_loss < best_val_loss:
                     best_val_loss = avg_val_loss
                     best_epoch = epoch
-                    best_model_state = model.state_dict().copy()
+                    best_model_state = copy.deepcopy(model.state_dict())
                     epochs_without_improvement = 0
                     
                     # Log best model metrics
                     mlflow.log_metric("best_val_loss", best_val_loss, step=epoch)
                     mlflow.log_metric("best_epoch", best_epoch, step=epoch)
                     
-                    # Save best model checkpoint
-                    if checkpoint_save_dir:
-                        best_model_path = f"{os.path.dirname(checkpoint_save_dir)}/best_model.pth"
-                        best_checkpoint = {
-                            'epoch': epoch,
-                            'model': best_model_state,
-                            'optimizer': optimizer.state_dict(),
-                            'history': history,
-                            'best_val_loss': best_val_loss,
-                            'best_train_loss': avg_train_loss,
-                            'best_epoch': best_epoch
-                        }
-                        torch.save(best_checkpoint, best_model_path)
-                        print(f"New best model saved at epoch {epoch+1} with val_loss: {avg_val_loss:.6f}")
+                    # Create best checkpoint dictionary
+                    best_checkpoint = {
+                        'epoch': epoch,
+                        'model': best_model_state,
+                        'optimizer': optimizer.state_dict(),
+                        'history': history,
+                        'best_val_loss': best_val_loss,
+                        'best_train_loss': avg_train_loss,
+                        'best_epoch': best_epoch
+                    }
+                    # Log best model directly to MLflow
+                    mlflow.pytorch.log_state_dict(best_model_state, f"best_model_state")
+                    mlflow.log_dict(best_checkpoint, f"best_model_checkpoint.json")
+                    print(f"New best model saved at epoch {epoch+1} with val_loss: {avg_val_loss:.6f}")
                 else:
                     epochs_without_improvement += 1
                 
@@ -212,33 +210,33 @@ def train_refinement_model(model, train_loader, val_loader=None,
                 if avg_train_loss < best_train_loss:
                     best_train_loss = avg_train_loss
                     best_epoch = epoch
-                    best_model_state = model.state_dict().copy()
+                    best_model_state = copy.deepcopy(model.state_dict())
                     epochs_without_improvement = 0
                     
                     # Log best model metrics
                     mlflow.log_metric("best_train_loss", best_train_loss, step=epoch)
                     mlflow.log_metric("best_epoch", best_epoch, step=epoch)
                     
-                    # Save best model checkpoint
-                    if checkpoint_save_dir:
-                        best_model_path = f"{os.path.dirname(checkpoint_save_dir)}/best_model.pth"
-                        best_checkpoint = {
-                            'epoch': epoch,
-                            'model': best_model_state,
-                            'optimizer': optimizer.state_dict(),
-                            'history': history,
-                            'best_train_loss': best_train_loss,
-                            'best_epoch': best_epoch
-                        }
-                        torch.save(best_checkpoint, best_model_path)
-                        print(f"New best model saved at epoch {epoch+1} with train_loss: {avg_train_loss:.6f}")
+                    # Create best checkpoint dictionary
+                    best_checkpoint = {
+                        'epoch': epoch,
+                        'model': best_model_state,
+                        'optimizer': optimizer.state_dict(),
+                        'history': history,
+                        'best_train_loss': best_train_loss,
+                        'best_epoch': best_epoch
+                    }
+                    # Log best model directly to MLflow
+                    mlflow.pytorch.log_state_dict(best_model_state, f"best_model_state")
+                    mlflow.log_dict(best_checkpoint, f"best_model_checkpoint.json")
+                    print(f"New best model saved at epoch {epoch+1} with train_loss: {avg_train_loss:.6f}")
                 else:
                     epochs_without_improvement += 1
                 
                 print(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {avg_train_loss:.6f}, Best Train Loss: {best_train_loss:.6f} (Epoch {best_epoch+1})")
             
-            # Save checkpoint
-            if checkpoint_save_dir:
+            # Log checkpoint every 5 epochs
+            if epoch % 5 == 0:
                 checkpoint = { 
                     'epoch': epoch,
                     'model': model.state_dict(),
@@ -248,15 +246,11 @@ def train_refinement_model(model, train_loader, val_loader=None,
                     'best_train_loss': best_train_loss,
                     'best_epoch': best_epoch
                 }
-                parent_dir = os.path.dirname(checkpoint_save_dir)
-                if epoch % 5 == 0:
-                    save_dir = f"{parent_dir}/checkpoint{epoch}.pth"
-                    torch.save(checkpoint, save_dir)
-                    # Log checkpoint as artifact to MLflow
-                    mlflow.log_artifact(save_dir, "checkpoints")
+                # Log checkpoint directly to MLflow
+                mlflow.log_dict(checkpoint, f"checkpoints/checkpoint{epoch}.json")
         
         # Log final model (current state)
-        mlflow.pytorch.log_model(model, "final_model")
+        mlflow.pytorch.log_model(model, f"final_model", input_example=train_loader.dataset[0][0].unsqueeze(0))
         
         # Load and log best model
         if best_model_state is not None:
@@ -264,12 +258,6 @@ def train_refinement_model(model, train_loader, val_loader=None,
             best_model = type(model)()  # Create new instance of same model class
             best_model.load_state_dict(best_model_state)
             mlflow.pytorch.log_model(best_model, "best_model")
-            
-            # Log best model path as artifact if it exists
-            if checkpoint_save_dir:
-                best_model_path = f"{os.path.dirname(checkpoint_save_dir)}/best_model.pth"
-                if os.path.exists(best_model_path):
-                    mlflow.log_artifact(best_model_path, "best_model_checkpoint")
         
         # Log final metrics
         mlflow.log_metric("final_train_loss", history['train_loss'][-1])
@@ -282,12 +270,7 @@ def train_refinement_model(model, train_loader, val_loader=None,
         mlflow.log_metric("best_epoch_final", best_epoch)
         mlflow.log_metric("epochs_without_improvement", epochs_without_improvement)
         
-        # Log training history as artifact
-        import pickle
-        history_path = "training_history.pkl"
-        with open(history_path, 'wb') as f:
-            pickle.dump(history, f)
-        mlflow.log_artifact(history_path, "training_artifacts")
-        os.remove(history_path)  # Clean up temporary file
+        # Log training history directly to MLflow
+        mlflow.log_dict(history, "training_artifacts/training_history.json")
     
     return model, optimizer, history, num_epochs
