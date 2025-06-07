@@ -18,12 +18,15 @@ import mlflow
 import mlflow.pytorch
 import numpy as np
 import random
+from logger_config import logger
 
 # Set MLflow tracking URI (optional - if you want to use a specific server)
 # mlflow.set_tracking_uri("http://localhost:5000")  # Uncomment if using MLflow server
 
 def main():
     start_time = time.time()
+    
+    logger.info("Starting data preparation...")
     
     # Data preparation
     # t4training_data = T4DatasetNoScaling(
@@ -64,6 +67,8 @@ def main():
     )
     training_data = ConcatDataset([t4training_data_no_scaling,t6training_data_no_scaling])
     
+    logger.info("Data preparation completed. Creating data loaders...")
+    
     # Set worker seed for reproducibility
     def seed_worker(worker_id):
         worker_seed = torch.initial_seed() % 2**32
@@ -80,10 +85,15 @@ def main():
                             worker_init_fn=seed_worker,
                             generator=g)
     
+    logger.info("Data loaders created. Initializing model...")
+    
     model = RefinementModel()
     
     # Print model summary
+    logger.info("Model summary:")
     summary(model, (1, 2, 1, 36, 41))
+    
+    logger.info("Starting model training...")
     
     # Train model with MLflow tracking
     model, optimizer, history, num_epochs = train_refinement_model(
@@ -91,14 +101,13 @@ def main():
         train_loader, 
         val_loader, 
         num_epochs=50,
-        checkpoint_save_dir='/scratch/IITB/monsoon_lab/24d1236/pratham/Model/TrainedModels/1_first_run/checkpoints/',
         experiment_name="Without_Scaling",
         run_name="1_first_run"
     )
     
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Execution time: {elapsed_time:.4f} seconds")
+    logger.info(f"Training completed. Total execution time: {elapsed_time:.4f} seconds")
     
 if __name__ == "__main__":
     main()

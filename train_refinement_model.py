@@ -7,6 +7,7 @@ import mlflow.pytorch
 import numpy as np
 import random
 import copy
+from logger_config import logger
 
 def set_seed(seed):
     """
@@ -57,7 +58,7 @@ def train_refinement_model(model, train_loader, val_loader=None,
     mlflow.enable_system_metrics_logging()
     
     with mlflow.start_run(run_name=run_name,log_system_metrics=True):
-        print(f'Using device: {device}')
+        logger.info(f'Using device: {device}')
         model = model.to(device)
         criterion = nn.MSELoss()  # Mean Squared Error Loss
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -103,7 +104,7 @@ def train_refinement_model(model, train_loader, val_loader=None,
             mlflow.log_param("resumed_from_epoch", start_epoch)
             mlflow.log_param("resumed_best_val_loss", best_val_loss)
         
-        print(f"Starting training for {num_epochs} epochs...")
+        logger.info(f"Starting training for {num_epochs} epochs...")
         
         for epoch in range(start_epoch, num_epochs):
             model.train()
@@ -136,6 +137,10 @@ def train_refinement_model(model, train_loader, val_loader=None,
                     # Update statistics
                     train_loss += loss.item()
                     pbar.set_postfix({"loss": f"{loss.item():.6f}"})
+                    
+                    # Log batch-level information every 10 batches
+                    if batch_idx % 10 == 0:
+                        logger.debug(f"Epoch {epoch+1}, Batch {batch_idx}, Loss: {loss.item():.6f}")
             
             # Calculate average training loss
             avg_train_loss = train_loss / len(train_loader)
@@ -200,11 +205,11 @@ def train_refinement_model(model, train_loader, val_loader=None,
                     # Log best model directly to MLflow
                     mlflow.pytorch.log_state_dict(best_model_state, f"best_model_state")
                     mlflow.log_dict(best_checkpoint, f"best_model_checkpoint.json")
-                    print(f"New best model saved at epoch {epoch+1} with val_loss: {avg_val_loss:.6f}")
+                    logger.info(f"New best model saved at epoch {epoch+1} with val_loss: {avg_val_loss:.6f}")
                 else:
                     epochs_without_improvement += 1
                 
-                print(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {avg_train_loss:.6f}, Val Loss: {avg_val_loss:.6f}, Best Val Loss: {best_val_loss:.6f} (Epoch {best_epoch+1})")
+                logger.info(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {avg_train_loss:.6f}, Val Loss: {avg_val_loss:.6f}, Best Val Loss: {best_val_loss:.6f} (Epoch {best_epoch+1})")
             else:
                 # If no validation loader, use training loss for best model selection
                 if avg_train_loss < best_train_loss:
@@ -229,11 +234,11 @@ def train_refinement_model(model, train_loader, val_loader=None,
                     # Log best model directly to MLflow
                     mlflow.pytorch.log_state_dict(best_model_state, f"best_model_state")
                     mlflow.log_dict(best_checkpoint, f"best_model_checkpoint.json")
-                    print(f"New best model saved at epoch {epoch+1} with train_loss: {avg_train_loss:.6f}")
+                    logger.info(f"New best model saved at epoch {epoch+1} with train_loss: {avg_train_loss:.6f}")
                 else:
                     epochs_without_improvement += 1
                 
-                print(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {avg_train_loss:.6f}, Best Train Loss: {best_train_loss:.6f} (Epoch {best_epoch+1})")
+                logger.info(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {avg_train_loss:.6f}, Best Train Loss: {best_train_loss:.6f} (Epoch {best_epoch+1})")
             
             # Log checkpoint every 5 epochs
             if epoch % 5 == 0:
