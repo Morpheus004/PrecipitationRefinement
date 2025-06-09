@@ -109,8 +109,8 @@ class TrainDataset(Dataset):
             # Calculate min and max for current file pair
             imerg_min = np.min(imerg_np, axis=0)
             imerg_max = np.max(imerg_np, axis=0)
-            pred_min = np.min(pred_np, axis=0)
-            pred_max = np.max(pred_np, axis=0)
+            pred_min = np.min(pred_np, axis=(0,1,2))
+            pred_max = np.max(pred_np, axis=(0,1,2))
 
             # Initialize arrays if first file
             if self.min_values is None:
@@ -118,8 +118,11 @@ class TrainDataset(Dataset):
                 self.max_values = np.full_like(imerg_max, -np.inf)
 
             # Update global min and max
-            self.min_values = np.minimum(self.min_values, np.minimum(imerg_min, pred_min))
-            self.max_values = np.maximum(self.max_values, np.maximum(imerg_max, pred_max))
+            # self.min_values = np.minimum(self.min_values, np.minimum(imerg_min, pred_min))
+            # self.max_values = np.maximum(self.max_values, np.maximum(imerg_max, pred_max))
+
+            self.min_values = np.minimum(self.min_values, pred_min)
+            self.max_values = np.maximum(self.max_values, pred_max)
 
     def __len__(self):
         """Return the size of the index i.e. the number of pieces of the datasets"""
