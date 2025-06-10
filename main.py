@@ -43,7 +43,7 @@ def main(logger):
         step_imerg=25,
         step_pred=0,
         window_size=2,
-        scaling_type="global_max",
+        scaling_type="grid_wise_min_max",
         scaling_values=None,
         max_calc_source="pred"
     )
@@ -52,41 +52,43 @@ def main(logger):
         step_imerg=21,
         step_pred=0,
         window_size=2,
-        scaling_type="global_max",
+        scaling_type="grid_wise_min_max",
         scaling_values=None,
         max_calc_source="pred"
     )
 
-    max_value=max(t4training_data_no_scaling.scaling_values,t6training_data_no_scaling.scaling_values)
 
-    t4training_data_max_scaling = TrainDataset(
+    min_value = np.minimum(t4training_data_no_scaling.scaling_values[0], t6training_data_no_scaling.scaling_values[0])
+    max_value = np.maximum(t4training_data_no_scaling.scaling_values[1], t6training_data_no_scaling.scaling_values[1])
+
+    t4training_data_grid_scaling = TrainDataset(
         T_4_file_to_file_mapping_training, 
         step_imerg=25,
         step_pred=0,
         window_size=2,
-        scaling_type="global_max",
-        scaling_values=max_value,
+        scaling_type="grid_wise_min_max",
+        scaling_values=(min_value,max_value),
         max_calc_source="both"
     )
-    t6training_data_max_scaling = TrainDataset(
+    t6training_data_grid_scaling = TrainDataset(
         T_6_file_to_file_mapping_training, 
         step_imerg=21,
         step_pred=0,
         window_size=2,
-        scaling_type="global_max",
-        scaling_values=max_value,
+        scaling_type="grid_wise_min_max",
+        scaling_values=(min_value,max_value),
         max_calc_source="both"
     )
-    t8val_data_max_scaling = TrainDataset(
+    t8val_data_grid_scaling = TrainDataset(
         T_8_file_to_file_mapping_training, 
         step_imerg=17,
         step_pred=0,
         window_size=2,
-        scaling_type="global_max",
-        scaling_values=max_value,
+        scaling_type="grid_wise_min_max",
+        scaling_values=(min_value,max_value),
         max_calc_source="both"
     )
-    training_data = ConcatDataset([t4training_data_max_scaling,t6training_data_max_scaling])
+    training_data = ConcatDataset([t4training_data_grid_scaling,t6training_data_grid_scaling])
     
     logger.info("Data preparation completed. Creating data loaders...")
     
@@ -102,7 +104,7 @@ def main(logger):
     train_loader = DataLoader(training_data, 64, shuffle=True, 
                             worker_init_fn=seed_worker,
                             generator=g)
-    val_loader = DataLoader(t8val_data_max_scaling, 64, shuffle=True,
+    val_loader = DataLoader(t8val_data_grid_scaling, 64, shuffle=True,
                             worker_init_fn=seed_worker,
                             generator=g)
     
@@ -123,7 +125,7 @@ def main(logger):
         train_loader, 
         val_loader, 
         num_epochs=50,
-        experiment_name="Global_max_scaling",
+        experiment_name="grid_wise_min_max_scaling",
         run_name="1_first_run"
     )
     
