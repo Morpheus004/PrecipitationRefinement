@@ -114,8 +114,8 @@ class TrainDataset(Dataset):
 
             # Initialize arrays if first file
             if self.min_values is None:
-                self.min_values = np.full_like(imerg_min, np.inf)
-                self.max_values = np.full_like(imerg_max, -np.inf)
+                self.min_values = np.full_like(pred_min, np.inf)
+                self.max_values = np.full_like(pred_max, -np.inf)
 
             # Update global min and max
             # self.min_values = np.minimum(self.min_values, np.minimum(imerg_min, pred_min))

@@ -270,15 +270,21 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
                 # Clean up temporary file
                 os.unlink(tmp.name)
         
+        with torch.inference_mode():
+            input_example_save=train_loader.dataset[0][0].unsqueeze(0).cpu()
         # Log final model (current state)
-        mlflow.pytorch.log_model(model, f"final_model", input_example=train_loader.dataset[0][0].unsqueeze(0).detach().numpy())
+        mlflow.pytorch.log_model(model, f"final_model",input_example=input_example_save)
         
         # Load and log best model
         if best_model_state is not None:
             # Create a new model instance and load best weights
-            best_model = type(model)()  # Create new instance of same model class
+            best_model = copy.deepcopy(model)  # Create new instance of same model class
             best_model.load_state_dict(best_model_state)
-            mlflow.pytorch.log_model(best_model, "best_model",input_example=train_loader.dataset[0][0].unsqueeze(0).detach().numpy())
+            best_model=best_model.cpu()
+            mlflow.pytorch.log_model(best_model, "best_model", input_example=input_example_save)
+            logger.info(f"Best model logged with input example shape: {input_example_save.shape}")
+        else:
+            logger.warning("No best model state found to log")
         
         # Log final metrics
         mlflow.log_metric("final_train_loss", history['train_loss'][-1])
