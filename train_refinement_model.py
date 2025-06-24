@@ -29,7 +29,7 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
                           device='cuda' if torch.cuda.is_available() else 'cpu', 
                           already_trained=False, checkpoint_path=None,
                           experiment_name="precipitation_refinement", run_name=None,
-                          seed=42):
+                          seed=42,description=None):
     """
     Training function for the precipitation refinement model with MLflow tracking
     
@@ -45,6 +45,7 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
         experiment_name: Name of the MLflow experiment
         run_name: Name of the MLflow run (optional)
         seed: Random seed for reproducibility (default: 42)
+        description: Provide desc for the run
     Returns:
         model,optimizer,history,num_epochs
     """
@@ -59,6 +60,8 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
     mlflow.enable_system_metrics_logging()
     
     with mlflow.start_run(run_name=run_name,log_system_metrics=True):
+        if description:
+            mlflow.set_tag("mlflow.note.content", description )
         logger.info(f'Using device: {device}')
         model = model.to(device)
         criterion = nn.MSELoss()  # Mean Squared Error Loss
@@ -271,7 +274,7 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
                 os.unlink(tmp.name)
         
         with torch.inference_mode():
-            input_example_save=train_loader.dataset[0][0].unsqueeze(0).cpu()
+            input_example_save=train_loader.dataset[0][0].unsqueeze(0).cpu().numpy()
         # Log final model (current state)
         mlflow.pytorch.log_model(model, f"final_model",input_example=input_example_save)
         

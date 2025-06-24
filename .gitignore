@@ -1,7 +1,11 @@
 TrainedModels/*
 Predictions/*
 __pycache__
-.ipynb_checkpoints/*
+.ipynb_checkpoints
 ERA5/*
 IMERG/*
+june_sept_2014/*
+Losses/*
+Notebooks/*
+*.log
 mlruns/*
