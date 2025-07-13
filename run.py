@@ -1,41 +1,23 @@
 from Versions import jjas_no_scaling
-from logger_config import logger
+from logger_config import setup_logger
+from cust_types import ScalingType
 
 if __name__=='__main__':
-    # --- Process-dependent CPU and GPU Logging ---
-    # import os
-    # import psutil
-    # import torch
-    # import logging
-    # 
-    # process = psutil.Process(os.getpid())
-    # cpu_percent = process.cpu_percent(interval=1)
-    # mem_info = process.memory_info()
-    # mem_mb = mem_info.rss / 1024 / 1024
-    # logger.info(f"[Resource] CPU usage: {cpu_percent}%")
-    # logger.info(f"[Resource] Memory usage: {mem_mb:.2f} MB")
-    # 
-    # if torch.cuda.is_available():
-    #     gpu_mem_allocated = torch.cuda.memory_allocated() / 1024 / 1024
-    #     gpu_mem_reserved = torch.cuda.memory_reserved() / 1024 / 1024
-    #     logger.info(f"[Resource] GPU memory allocated: {gpu_mem_allocated:.2f} MB")
-    #     logger.info(f"[Resource] GPU memory reserved: {gpu_mem_reserved:.2f} MB")
-    #     try:
-    #         import subprocess
-    #         result = subprocess.run([
-    #             'nvidia-smi',
-    #             '--query-gpu=utilization.gpu',
-    #             '--format=csv,noheader,nounits'
-    #         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    #         if result.returncode == 0:
-    #             gpu_util = result.stdout.strip()
-    #             logger.info(f"[Resource] GPU utilization: {gpu_util}%")
-    #     except Exception as e:
-    #         logger.warning(f"[Resource] Could not query GPU utilization: {e}")
-    # else:
-    #     logger.info("[Resource] CUDA not available. Skipping GPU logging.")
+    # hc=[64,128,64]
+    # hc=[128,256,128]
+    # bs=[64,128,256,512]
+    # for i in bs:
+    #     jjas_no_scaling.jjas_main(logger=logger,batch_size=i,hidden_channels=hc,scaling_type='GlobalMax',kernel_size=5)
+    #     jjas_no_scaling.jjas_main(logger=logger,batch_size=i,hidden_channels=hc,scaling_type='GlobalMax',kernel_size=3)
+    #     jjas_no_scaling.jjas_main(logger=logger,batch_size=i,hidden_channels=hc,scaling_type='NoScaling',kernel_size=5)
+    #     jjas_no_scaling.jjas_main(logger=logger,batch_size=i,hidden_channels=hc,scaling_type='NoScaling',kernel_size=3)
+    logger = setup_logger('gmtraj')
+    scalingtype: ScalingType = 'GlobalMax'
+    jjas_no_scaling.jjas_main(logger=logger,batch_size=64,kernel_size=3,scaling_type=scalingtype,hidden_channels=[32,64,32])
 
-    jjas_no_scaling.jjas_main(logger=logger,kernel_size=5)
+    logger = setup_logger('nstraj')
+    scalingtype: ScalingType = 'NoScaling'
+    jjas_no_scaling.jjas_main(logger=logger,batch_size=64,kernel_size=3,scaling_type=scalingtype,hidden_channels=[32,64,32])
     
     # K-Fold Cross Validation Usage
     # Uncomment the following line to run k-fold cross validation

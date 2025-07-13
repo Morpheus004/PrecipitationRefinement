@@ -20,7 +20,7 @@ class JJASDataset(Dataset):
         self.imerg = xr.open_dataset(imerg_path)
         self.scaling_type = scaling_type
         if scaling_type == 'GlobalMax':
-            self.global_max = self.pred.max().values*1000
+            self.global_max = self.pred['total_precipitation_12hr'].max().values*1000
             
     @staticmethod
     def _preprocess(df):

@@ -7,7 +7,6 @@ import mlflow.pytorch
 import numpy as np
 import random
 import copy
-from logger_config import logger
 import tempfile
 
 def set_seed(seed):
@@ -29,7 +28,7 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
                           device='cuda' if torch.cuda.is_available() else 'cpu', 
                           already_trained=False, checkpoint_path=None,
                           experiment_name="precipitation_refinement", run_name=None,
-                          seed=42,description=None):
+                          seed=42,description=None,log_file=None):
     """
     Training function for the precipitation refinement model with MLflow tracking
     
@@ -46,6 +45,7 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
         run_name: Name of the MLflow run (optional)
         seed: Random seed for reproducibility (default: 42)
         description: Provide desc for the run
+        log_file: Path to the log file
     Returns:
         model,optimizer,history,num_epochs
     """
@@ -88,6 +88,10 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
         mlflow.log_param("optimizer", "Adam")
         mlflow.log_param("loss_function", "MSELoss")
         mlflow.log_param("train_dataset_size", len(train_loader.dataset))
+        max_val = getattr(train_loader.dataset, 'max', None)
+        if max_val is not None:
+            mlflow.log_param("global_max_value", max_val)
+
         if val_loader:
             mlflow.log_param("val_dataset_size", len(val_loader.dataset))
         mlflow.log_param("random_seed", seed)
@@ -114,7 +118,7 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
             model.train()
             train_loss = 0
             
-            with tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}") as pbar:
+            with tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}",file=open(os.devnull,'w')) as pbar:
                 for batch_idx, (pred_data, imerg_data) in enumerate(pbar):
                     # Move data to device
                     pred_data = pred_data.to(device)  # Shape: [batch_size, 2, 1, height, width]
@@ -140,11 +144,8 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
                     
                     # Update statistics
                     train_loss += loss.item()
-                    pbar.set_postfix({"loss": f"{loss.item():.6f}"})
                     
-                    # Log batch-level information every 10 batches
-                    if batch_idx % 10 == 0:
-                        logger.debug(f"Epoch {epoch+1}, Batch {batch_idx}, Loss: {loss.item():.6f}")
+                    logger.debug(f"Epoch {epoch+1}, Batch {batch_idx}, Loss: {loss.item():.6f}")
             
             # Calculate average training loss
             avg_train_loss = train_loss / len(train_loader)
@@ -276,7 +277,7 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
         with torch.inference_mode():
             input_example_save=train_loader.dataset[0][0].unsqueeze(0).cpu().numpy()
         # Log final model (current state)
-        mlflow.pytorch.log_model(model, f"final_model",input_example=input_example_save)
+        mlflow.pytorch.log_model(copy.deepcopy(model).cpu(), f"final_model",input_example=input_example_save)
         
         # Load and log best model
         if best_model_state is not None:
@@ -302,6 +303,7 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
         
         # Log training history directly to MLflow
         mlflow.log_dict(history, "training_artifacts/training_history.json")
-        mlflow.log_artifact('/scratch/IITB/monsoon_lab/24d1236/pratham/Model/model_training.log',"Logs")
+        if log_file:
+            mlflow.log_artifact(log_file,"Logs")
     
     return model, optimizer, history, num_epochs

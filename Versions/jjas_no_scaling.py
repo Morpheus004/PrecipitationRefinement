@@ -1,5 +1,6 @@
 import torch
 from Models import RefinementModel
+from Models import TrajGRU
 from torchinfo import summary
 from train_refinement_model import train_refinement_model
 import time
@@ -13,9 +14,11 @@ import mlflow
 import threading
 import os
 import psutil
+import io
+from contextlib import redirect_stdout
 
 class ResourceLogger:
-    def __init__(self, logger, interval=10, log_file='resource_stats.log'):
+    def __init__(self, logger, interval=10, log_file='/scratch/IITB/monsoon_lab/24d1236/pratham/Model/Logs/resources/k3b64noscaling.log'):
         self.logger = logger
         self.interval = interval
         self.log_file = log_file
@@ -69,18 +72,18 @@ class ResourceLogger:
             self.logger.info(f"[Resource] {log_line.strip()}")
             self._stop_event.wait(self.interval)
 
-def jjas_main(logger,kernel_size=3):
+def jjas_main(logger,batch_size,scaling_type,hidden_channels,kernel_size=3):
     start_time = time.time()
     
     # Start resource logger
-    resource_logger = ResourceLogger(logger, interval=10)
-    resource_logger.start()
+    # resource_logger = ResourceLogger(logger, interval=10,log_file=f'/scratch/IITB/monsoon_lab/24d1236/pratham/Model/Logs/resources/k{kernel_size}b{batch_size}maxscaling.log')
+    # resource_logger.start()
     try:
         logger.info("Starting data preparation...")
-        PRED_DIR='/scratch/IITB/monsoon_lab/24d1236/pratham/gencast_1deg/predictions'
-        IMERG_PATH='/scratch/IITB/monsoon_lab/24d1236/pratham/Model/june_sept_2014/IMERG/IMERG1_from_31May2018_to_06Oct2018_resampled_12hr_final.nc'
+        PRED_DIR='/scratch/IITB/monsoon_lab/24d1236/pratham/gencast_1deg/predictions_2018/'
+        IMERG_PATH='/scratch/IITB/monsoon_lab/24d1236/pratham/Datasets/june_sept_2018/IMERG/IMERG1_from_31May2018_to_06Oct2018_resampled_12hr_final.nc'
         
-        dataset = JJASDataset(PRED_DIR,IMERG_PATH,2,scaling_type='NoScaling')
+        dataset = JJASDataset(PRED_DIR,IMERG_PATH,2,scaling_type=scaling_type)
 
         logger.info("Data preparation completed. Creating data loaders...")
         
@@ -104,19 +107,25 @@ def jjas_main(logger,kernel_size=3):
         )
 
         # DataLoaders with dedicated generator
-        train_loader = DataLoader(train_dataset, 64, shuffle=True, 
+        train_loader = DataLoader(train_dataset, batch_size, shuffle=True, 
                                 worker_init_fn=seed_worker, generator=loader_gen)
-        val_loader = DataLoader(val_dataset, 64, shuffle=True,
+        val_loader = DataLoader(val_dataset, batch_size, shuffle=True,
                                 worker_init_fn=seed_worker, generator=loader_gen)
         logger.info(f"Training indices:{train_dataset.indices}")
         logger.info("Data loaders created. Initializing model...")
         
-        model = RefinementModel(kernel_size=kernel_size)
+        # model = RefinementModel(kernel_size=kernel_size,hidden_channels=hidden_channels)
+        model = TrajGRU(1,64,(3,3),L=9)
         
         # Print model summary
         logger.info("Model summary:")
-        summary(model, (1, 2, 1, 36, 41))
-        
+        # Capture summary output
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            summary(model, input_size=(2, 1, 36, 41))
+
+        # Log the summary
+        logger.info("Model Summary:\n%s", buffer.getvalue()) 
         logger.info("Starting model training...")
         
         # Train model with MLflow tracking
@@ -126,18 +135,23 @@ def jjas_main(logger,kernel_size=3):
             train_loader, 
             val_loader, 
             num_epochs=50,
-            experiment_name="JJAS_No_Scaling",
-            run_name="2_run_kernel_size_5",
-            description="2 run on JJAS no scaling and kernel size is 5"
+            # experiment_name=f"JJAS_{scaling_type}_h{'_'.join(map(str,hidden_channels))}",
+            experiment_name=f"Traj_JJAS_{scaling_type}",
+            # run_name=f"1_run_b{batch_size}_k{kernel_size}_h{'_'.join(map(str,hidden_channels))}",
+            run_name=f"1_Traj_run_b{batch_size}",
+            # description=f"First run with kernel size {kernel_size} and batch size {batch_size} with hidden channels as {'_'.join(map(str,hidden_channels))}",
+            description=f"Traj First Run batch size as {batch_size}",
+            log_file=f'/scratch/IITB/monsoon_lab/24d1236/pratham/Model/model_training.log'
         )
         
         end_time = time.time()
         elapsed_time = end_time - start_time
         logger.info(f"Training completed. Total execution time: {elapsed_time:.4f} seconds")
     finally:
-        resource_logger.stop()
+        print('completed')
+        # resource_logger.stop()
         # Log resource stats file as MLflow artifact
-        mlflow.log_artifact(resource_logger.log_file)
+        # mlflow.log_artifact(resource_logger.log_file)
 
 def jjas_kfold(logger, k_folds=5, kernel_size=3, num_epochs=50):
     """
@@ -221,7 +235,7 @@ def jjas_kfold(logger, k_folds=5, kernel_size=3, num_epochs=50):
                 num_epochs=num_epochs,
                 experiment_name=f"JJAS_No_Scaling_KFold",
                 run_name=f"fold_{fold + 1}_kernel_size_{kernel_size}",
-                description=f"Fold {fold + 1} of {k_folds}-fold CV on JJAS no scaling with kernel size {kernel_size}"
+                description=f"Fold {fold + 1} of {k_folds}-fold CV on JJAS no scaling with kernel size {kernel_size}",
             )
             
             # Store fold results

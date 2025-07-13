@@ -109,8 +109,7 @@ class TrajGRU(nn.Module):
         self.cell = TrajGRUCell(input_channels, hidden_channels, kernel_size, L, zoneout)
         self.hidden_channels = hidden_channels
         # Set output channels for refinement (default: input_channels)
-        if refine_out_channels is None:
-            refine_out_channels = input_channels
+
         # Refinement layers similar to RefinementModel
         self.refine_layers = nn.Sequential(
             nn.Conv2d(64, 32, kernel_size=3, padding=1),

@@ -16,5 +16,5 @@ module load cuda/12.0
 
 eval "$(conda shell.bash hook)"
 conda activate ug
-python /scratch/IITB/monsoon_lab/24d1236/pratham/Model/main.py
+python /scratch/IITB/monsoon_lab/24d1236/pratham/Model/run.py
 sed -i 's/\r/\n/g' /scratch/IITB/monsoon_lab/24d1236/pratham/Model/model_training.log
