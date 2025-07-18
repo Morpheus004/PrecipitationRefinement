@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=convlstm
-#SBATCH --error=model_training.log
-#SBATCH --output=model_training.log
+#SBATCH --error=model_training_ran.log
+#SBATCH --output=model_training_ran.log
 #SBATCH --nodes=1 
 #SBATCH --mem=50G
-#SBATCH --time=20:00:00
+#SBATCH --time=2-00:00:00
 #SBATCH --partition=gpu
 #SBATCH --ntasks=1           # This basically refers to no. parallel jobs which would be run using mpi
 #SBATCH --cpus-per-task=20   # How many cpus each parallel task will get

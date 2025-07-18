@@ -37,4 +37,16 @@ models_df = pd.DataFrame.from_dict({
         "year_trained" : '2018',
         "best_checkpoint_path" : '/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/236425716617773343/0adcebe189ee4a508d390cafb4881d88/artifacts/best_model_checkpoint/best_model_epoch_21.ptha3olj1no.pth'
     },
+    "UNet_MaxScale" : {
+        'year_trained' : '2018',
+        'epoch' : 21,
+        'batch_size' : 64,
+        'best_checkpoint_path' : '/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/441162194934542005/60e9c1cf7efe442d821707f8839f90f5/artifacts/best_model_checkpoint/best_model_epoch_21.pthx2u2is44.pth',
+    },
+    "UNet_NoScale" : {
+        'year_trained' : '2018',
+        'epoch' : 21,
+        'batch_size' : 64,
+        'best_checkpoint_path' : '/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/793580818932410493/51c3634ba529441798da964c5a66d290/artifacts/best_model_checkpoint/best_model_epoch_21.pthgg39l_lh.pth',
+    }
 },orient='index')

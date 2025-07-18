@@ -10,8 +10,9 @@ def setup_logger(logger_name):
     logger.setLevel(logging.DEBUG)
     
     # Avoid adding multiple handlers if logger already exists
-    if logger.handlers:
-        return logger
+    # if logger.handlers:
+    #     return logger
+    logger.handlers.clear()
     
     # Create formatters
     formatter = logging.Formatter(

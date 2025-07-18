@@ -94,4 +94,4 @@ class UNet(nn.Module):
         x_concat = torch.cat((x[:,0],x[:,1]),dim=1) # (B, 2, H, W)
         refined = self.forward_single(x_concat)     # (B, 1, H, W)
 
-        return refined.unsqueeze(1)                 # (B, 1, 1, H, W)
+        return refined

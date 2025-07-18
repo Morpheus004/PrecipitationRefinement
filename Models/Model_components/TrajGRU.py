@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # Utility function for warping hidden states with flow fields
-def wrap(input, flow):
+def warp(input, flow):
     # input: (B, C, H, W), flow: (B, 2, H, W)
     B, C, H, W = input.size()
     device = input.device
@@ -87,9 +87,9 @@ class TrajGRUCell(nn.Module):
         else:
             i2h_chunks = [0, 0, 0]
         flows = self._flow_generator(x, h_prev)
-        warped = [wrap(h_prev, -flow) for flow in flows]  # L tensors (B, Hc, H, W)
-        wrapped_cat = torch.cat(warped, dim=1)  # (B, L*Hc, H, W)
-        h2h = self.ret(wrapped_cat)  # (B, 3*Hc, H, W)
+        warped = [warp(h_prev, -flow) for flow in flows]  # L tensors (B, Hc, H, W)
+        warped_cat = torch.cat(warped, dim=1)  # (B, L*Hc, H, W)
+        h2h = self.ret(warped_cat)  # (B, 3*Hc, H, W)
         h2h_chunks = torch.chunk(h2h, 3, dim=1)
         reset_gate = torch.sigmoid(i2h_chunks[0] + h2h_chunks[0])
         update_gate = torch.sigmoid(i2h_chunks[1] + h2h_chunks[1])
@@ -105,18 +105,23 @@ class TrajGRU(nn.Module):
     Multi-step TrajGRU module for sequence modeling
     """
     def __init__(self, input_channels, hidden_channels, kernel_size, L=5, zoneout=0.0):
+        """
+        hidden_channels: list of size two. First index will give hidden channels for flows and second for the refinement step
+        kernel_size: kernel_size for input to hidden . For flows it is hardcoded as 5
+        L: Number of links
+        """
         super(TrajGRU, self).__init__()
-        self.cell = TrajGRUCell(input_channels, hidden_channels, kernel_size, L, zoneout)
-        self.hidden_channels = hidden_channels
+        self.cell = TrajGRUCell(input_channels, hidden_channels[0], kernel_size, L, zoneout)
+        self.hidden_channels = hidden_channels[0]
         # Set output channels for refinement (default: input_channels)
 
         # Refinement layers similar to RefinementModel
         self.refine_layers = nn.Sequential(
-            nn.Conv2d(64, 32, kernel_size=3, padding=1),
+            nn.Conv2d(hidden_channels[0], hidden_channels[1], kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1),
+            nn.Conv2d(hidden_channels[1], hidden_channels[1], kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.Conv2d(32, 1, kernel_size=1),
+            nn.Conv2d(hidden_channels[1], 1, kernel_size=1),
         )
 
     def forward(self, x, h0=None ):

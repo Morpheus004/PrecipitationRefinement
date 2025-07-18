@@ -1,6 +1,6 @@
 import torch
 from Models import RefinementModel
-from Models import TrajGRU
+from Models import TrajGRU,UNet
 from torchinfo import summary
 from train_refinement_model import train_refinement_model
 import time
@@ -72,13 +72,14 @@ class ResourceLogger:
             self.logger.info(f"[Resource] {log_line.strip()}")
             self._stop_event.wait(self.interval)
 
-def jjas_main(logger,batch_size,scaling_type,hidden_channels,kernel_size=3):
+def jjas_main(logger,model,batch_size,scaling_type,hidden_channels,experiment_name,run_name,description,kernel_size=3):
     start_time = time.time()
     
     # Start resource logger
     # resource_logger = ResourceLogger(logger, interval=10,log_file=f'/scratch/IITB/monsoon_lab/24d1236/pratham/Model/Logs/resources/k{kernel_size}b{batch_size}maxscaling.log')
     # resource_logger.start()
     try:
+        logger.info(f"Run desc: {description}")
         logger.info("Starting data preparation...")
         PRED_DIR='/scratch/IITB/monsoon_lab/24d1236/pratham/gencast_1deg/predictions_2018/'
         IMERG_PATH='/scratch/IITB/monsoon_lab/24d1236/pratham/Datasets/june_sept_2018/IMERG/IMERG1_from_31May2018_to_06Oct2018_resampled_12hr_final.nc'
@@ -114,15 +115,12 @@ def jjas_main(logger,batch_size,scaling_type,hidden_channels,kernel_size=3):
         logger.info(f"Training indices:{train_dataset.indices}")
         logger.info("Data loaders created. Initializing model...")
         
-        # model = RefinementModel(kernel_size=kernel_size,hidden_channels=hidden_channels)
-        model = TrajGRU(1,64,(3,3),L=9)
-        
         # Print model summary
         logger.info("Model summary:")
         # Capture summary output
         buffer = io.StringIO()
         with redirect_stdout(buffer):
-            summary(model, input_size=(2, 1, 36, 41))
+            summary(model, input_size=(1,2, 1, 36, 41))
 
         # Log the summary
         logger.info("Model Summary:\n%s", buffer.getvalue()) 
@@ -136,11 +134,15 @@ def jjas_main(logger,batch_size,scaling_type,hidden_channels,kernel_size=3):
             val_loader, 
             num_epochs=50,
             # experiment_name=f"JJAS_{scaling_type}_h{'_'.join(map(str,hidden_channels))}",
-            experiment_name=f"Traj_JJAS_{scaling_type}",
+            experiment_name=experiment_name,
+            # experiment_name=f"Traj_JJAS_{scaling_type}",
+            # experiment_name=f"Unet_JJAS_{scaling_type}",
             # run_name=f"1_run_b{batch_size}_k{kernel_size}_h{'_'.join(map(str,hidden_channels))}",
-            run_name=f"1_Traj_run_b{batch_size}",
+            # run_name=f"1_Traj_run_b{batch_size}",
+            run_name=run_name,
             # description=f"First run with kernel size {kernel_size} and batch size {batch_size} with hidden channels as {'_'.join(map(str,hidden_channels))}",
-            description=f"Traj First Run batch size as {batch_size}",
+            # description=f"Traj First Run batch size as {batch_size}",
+            description=description,
             log_file=f'/scratch/IITB/monsoon_lab/24d1236/pratham/Model/model_training.log'
         )
         
