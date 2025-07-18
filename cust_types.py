@@ -1,3 +1,3 @@
 from typing import Literal
 
-ScalingType = Literal['NoScaling','GlobalMax']
+ScalingType = Literal['NoScaling','GlobalMax','BoxCox']

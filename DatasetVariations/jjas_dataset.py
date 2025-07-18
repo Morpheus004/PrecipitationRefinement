@@ -4,6 +4,8 @@ import xarray as xr
 import glob
 import os
 from cust_types import ScalingType
+import numpy as np
+from scipy import stats
 
 class JJASDataset(Dataset):
     def __init__(self,pred_dir_path,imerg_path,window_size,scaling_type:ScalingType):
@@ -21,6 +23,11 @@ class JJASDataset(Dataset):
         self.scaling_type = scaling_type
         if scaling_type == 'GlobalMax':
             self.global_max = self.pred['total_precipitation_12hr'].max().values*1000
+        elif scaling_type == 'BoxCox':
+            flat_precip = self.pred['total_precipitation_12hr'].values.flatten() * 1000
+            flat_precip_changed = flat_precip[flat_precip > 0]
+            # Compute Box-Cox transform and store lambda
+            _, self.boxcox_lambda = stats.boxcox(flat_precip_changed)
             
     @staticmethod
     def _preprocess(df):
@@ -43,6 +50,11 @@ class JJASDataset(Dataset):
 
         if self.scaling_type == 'GlobalMax':
             return pred_tensor / self.global_max, imerg_tensor / self.global_max
+        elif self.scaling_type == 'BoxCox':
+            epsilon = 1e-6
+            pred_tensor_bc = torch.tensor(stats.boxcox((pred_tensor.numpy() + epsilon).flatten(), lmbda=self.boxcox_lambda)).reshape(pred_tensor.shape)
+            imerg_tensor_bc = torch.tensor(stats.boxcox((imerg_tensor.numpy() + epsilon).flatten(), lmbda=self.boxcox_lambda)).reshape(imerg_tensor.shape)
+            return pred_tensor_bc, imerg_tensor_bc
         else:
             return pred_tensor, imerg_tensor
 
