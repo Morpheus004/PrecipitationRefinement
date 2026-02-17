@@ -1,16 +1,16 @@
 import logging
 import os
 
-def setup_logger(logger_name):
+def setup_logger(logger_name,log_file=None,level=None):
     """
     Configure and return a logger instance with both file and console handlers.
     """
     # Create logger
     logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.DEBUG)
-    
-    # Avoid adding multiple handlers if logger already exists
-    # if logger.handlers:
+    if level is None:
+        logger.setLevel(logging.INFO)
+    else: 
+        logger.setLevel(level)
     #     return logger
     logger.handlers.clear()
     
@@ -28,7 +28,10 @@ def setup_logger(logger_name):
     
     # # File handler (as backup)
     try:
-        log_file_path = '/scratch/IITB/monsoon_lab/24d1236/pratham/Model/model_training.log'
+        if log_file:
+            log_file_path = log_file
+        else:
+            log_file_path = '/scratch/IITB/monsoon_lab/24d1236/pratham/Model/model_training.log'
 
         # Ensure directory exists
         os.makedirs(os.path.dirname(log_file_path), exist_ok=True)

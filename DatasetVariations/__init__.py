@@ -4,11 +4,13 @@ from .t4dataset_no_scaling import T4DatasetNoScaling
 from .test_dataset import TestDataset
 from .train_dataset import TrainDataset
 from .jjas_dataset import JJASDataset
+from .jjas_dataset_mean import JJASDatasetMean
 __all__ = [
     "T4DatasetNoScaling",
     "T4DatasetMinMaxScalerOverall",
     "T4DatasetNoScaling",
     "TestDataset",
     "TrainDataset",
-    "JJASDataset"
+    "JJASDataset",
+    "JJASDatasetMean"
 ]

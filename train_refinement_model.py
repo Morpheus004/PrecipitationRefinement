@@ -115,6 +115,7 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
         logger.info(f"Starting training for {num_epochs} epochs...")
         
         for epoch in range(start_epoch, num_epochs):
+            mlflow.log_metric('epoch',epoch)
             model.train()
             train_loss = 0
             

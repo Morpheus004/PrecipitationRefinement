@@ -1,21 +1,22 @@
-import torch
-from Models import RefinementModel
-from Models import TrajGRU,UNet
-from torchinfo import summary
-from train_refinement_model import train_refinement_model
-import time
-import numpy as np
-import random
-from DatasetVariations import JJASDataset
-from torch.utils.data import random_split,DataLoader,SubsetRandomSampler
-from sklearn.model_selection import KFold
-import mlflow
-
-import threading
-import os
-import psutil
 import io
+import os
+import random
+import threading
+import time
 from contextlib import redirect_stdout
+
+import mlflow
+import numpy as np
+import psutil
+import torch
+from sklearn.model_selection import KFold
+from torch.utils.data import DataLoader, SubsetRandomSampler, random_split
+from torchinfo import summary
+
+from DatasetVariations import JJASDataset
+from Models import RefinementModel, TrajGRU, UNet
+from train_refinement_model import train_refinement_model
+
 
 class ResourceLogger:
     def __init__(self, logger, interval=10, log_file='/scratch/IITB/monsoon_lab/24d1236/pratham/Model/Logs/resources/k3b64noscaling.log'):
@@ -72,7 +73,7 @@ class ResourceLogger:
             self.logger.info(f"[Resource] {log_line.strip()}")
             self._stop_event.wait(self.interval)
 
-def jjas_main(logger,model,batch_size,scaling_type,hidden_channels,experiment_name,run_name,description,kernel_size=3):
+def jjas_main(logger,model,batch_size,scaling_type,hidden_channels,experiment_name,run_name,description,log_file,kernel_size=3,dataset=None):
     start_time = time.time()
     
     # Start resource logger
@@ -84,7 +85,8 @@ def jjas_main(logger,model,batch_size,scaling_type,hidden_channels,experiment_na
         PRED_DIR='/scratch/IITB/monsoon_lab/24d1236/pratham/gencast_1deg/predictions_2018/'
         IMERG_PATH='/scratch/IITB/monsoon_lab/24d1236/pratham/Datasets/june_sept_2018/IMERG/IMERG1_from_31May2018_to_06Oct2018_resampled_12hr_final.nc'
         
-        dataset = JJASDataset(PRED_DIR,IMERG_PATH,2,scaling_type=scaling_type)
+        if dataset is None:
+            dataset = JJASDataset(PRED_DIR,IMERG_PATH,2,scaling_type=scaling_type)
 
         logger.info("Data preparation completed. Creating data loaders...")
         
@@ -109,10 +111,10 @@ def jjas_main(logger,model,batch_size,scaling_type,hidden_channels,experiment_na
 
         # DataLoaders with dedicated generator
         train_loader = DataLoader(train_dataset, batch_size, shuffle=True, 
-                                worker_init_fn=seed_worker, generator=loader_gen)
+                                worker_init_fn=seed_worker, generator=loader_gen, pin_memory=True, prefetch_factor= 5, num_workers=5)
         val_loader = DataLoader(val_dataset, batch_size, shuffle=True,
-                                worker_init_fn=seed_worker, generator=loader_gen)
-        logger.info(f"Training indices:{train_dataset.indices}")
+                                worker_init_fn=seed_worker, generator=loader_gen, pin_memory=True ,prefetch_factor= 5, num_workers=5)
+        logger.debug(f"Training indices:{train_dataset.indices}")
         logger.info("Data loaders created. Initializing model...")
         
         # Print model summary
@@ -143,7 +145,7 @@ def jjas_main(logger,model,batch_size,scaling_type,hidden_channels,experiment_na
             # description=f"First run with kernel size {kernel_size} and batch size {batch_size} with hidden channels as {'_'.join(map(str,hidden_channels))}",
             # description=f"Traj First Run batch size as {batch_size}",
             description=description,
-            log_file=f'/scratch/IITB/monsoon_lab/24d1236/pratham/Model/model_training.log'
+            log_file=log_file
         )
         
         end_time = time.time()

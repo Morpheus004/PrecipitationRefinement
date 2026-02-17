@@ -11,7 +11,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class JJASDataset(Dataset):
+class JJASDatasetMean(Dataset):
     def __init__(self,pred_dir_path,imerg_path,window_size,scaling_type:ScalingType, climatology_path='/scratch/IITB/monsoon_lab/24d1236/pratham/Datasets/IMERG_consolidated/IMERG_JJAS_climatology_final_stacked_1degree.nc', global_max = None):
         """
         Args:
@@ -26,7 +26,7 @@ class JJASDataset(Dataset):
         logger.debug(f"IMERG:{imerg_path}")
         self.window_size=window_size
         self.pred_files = sorted(glob.glob(f"{pred_dir_path}/*"),key=lambda x:int(os.path.basename(x).split('_')[0]))
-        self.pred = xr.open_mfdataset(self.pred_files,decode_timedelta=True,preprocess=self._preprocess).compute()
+        self.pred = xr.open_mfdataset(self.pred_files,decode_timedelta=True,preprocess=self._preprocess).mean('sample').compute()
         self.imerg = xr.open_dataset(imerg_path)
         self.scaling_type = scaling_type
         if scaling_type == 'GlobalMax':
@@ -74,15 +74,14 @@ class JJASDataset(Dataset):
         return df['total_precipitation_12hr']
             
     def __len__(self):
-        sample,batch,time,_,_=self.pred.sizes.values()
-        return sample*batch
+        batch,time,_,_=self.pred.sizes.values()
+        return batch
 
     def __getitem__(self,idx):
-        sample_size = self.pred.sizes['sample']
-        first_timestamp=self.pred.isel(sample=int(idx%sample_size),batch=int(idx//sample_size),time=0).datetime.values
-        last_timestamp=self.pred.isel(sample=int(idx%sample_size),batch=int(idx//sample_size),time=self.window_size-1).datetime.values
+        first_timestamp=self.pred.isel(batch=int(idx),time=0).datetime.values
+        last_timestamp=self.pred.isel(batch=int(idx),time=self.window_size-1).datetime.values
         
-        pred_tensor=torch.tensor(self.pred.isel(sample=int(idx%8),batch=int(idx//8),time=slice(0,self.window_size)).sel(lat=slice(5,40), lon=slice(60,100))['total_precipitation_12hr'].values*1000)
+        pred_tensor=torch.tensor(self.pred.isel(batch=int(idx),time=slice(0,self.window_size)).sel(lat=slice(5,40), lon=slice(60,100))['total_precipitation_12hr'].values*1000)
         imerg_tensor=torch.tensor(self.imerg.sel(time=slice(first_timestamp,last_timestamp)).sel(lat=slice(5,40), lon=slice(60,100))['precipitation'].transpose('time','lat','lon').values)
 
         pred_tensor[pred_tensor < 0] = 0

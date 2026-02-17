@@ -1,0 +1,12 @@
+,kernel_size,hidden_channels,year_trained,best_checkpoint_path,epoch,batch_size,L
+JJASNoScalingh32_64_32,5.0,"[32, 64, 32]",2018,/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/260815684233579231/535735d042694da2b1da4c60f0a13f42/artifacts/best_model_checkpoint/best_model_epoch_19.pth1nmw8wtv.pth,,,
+JJASMaxScalingh32_64_32,3.0,"[32, 64, 32]",2018,/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/196011945286209413/1178381b05ad4251bed6a330e45be89f/artifacts/best_model_checkpoint/best_model_epoch_19.pth19meyytt.pth,,,
+JJASNoScalingh64_128_64,5.0,"[64, 128, 64]",2018,/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/861560316923204160/bca60636557547fca1cbab312cf0290f/artifacts/best_model_checkpoint/best_model_epoch_21.pthdtjkfu6n.pth,,,
+JJASMaxScalingh64_128_64,5.0,"[64, 128, 64]",2018,/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/325894012973976081/cff81d37a3f7496892aced162f7fcf51/artifacts/best_model_checkpoint/best_model_epoch_21.pthjr6w9f3y.pth,,,
+JJASNoScalingh128_256_128,5.0,"[128, 256, 128]",2018,/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/321967748427509393/ac9942442472460cb9c017ab3b33bb5d/artifacts/best_model_checkpoint/best_model_epoch_21.pthl9ulcg8h.pth,,,
+JJASMaxScalingh128_256_128,5.0,"[128, 256, 128]",2018,/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/236425716617773343/0adcebe189ee4a508d390cafb4881d88/artifacts/best_model_checkpoint/best_model_epoch_21.ptha3olj1no.pth,,,
+UNet_MaxScale,,,2018,/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/441162194934542005/60e9c1cf7efe442d821707f8839f90f5/artifacts/best_model_checkpoint/best_model_epoch_21.pthx2u2is44.pth,21.0,64.0,
+UNet_NoScale,,,2018,/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/793580818932410493/51c3634ba529441798da964c5a66d290/artifacts/best_model_checkpoint/best_model_epoch_21.pthgg39l_lh.pth,21.0,64.0,
+10_conv,5.0,"[32, 64, 32]",2013-2023,/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/651728381178762379/e16b4ca565524e6189a8d07f01e59fe7/artifacts/best_model_checkpoint/best_model_epoch_22.pthg_bsllr5.pth,NaN,128,
+10_traj_maxscale,5.0,"[128, 256]",2013-2023,/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/651728381178762379/840bafa8174e419e9a84f2c8de8224f7/artifacts/best_model_checkpoint/best_model_epoch_25.pthcbto1dch.pth,25.0,128,5.0
+10_unet_maxscale,,,2013-2023,/scratch/IITB/monsoon_lab/24d1236/pratham/Model/mlruns/651728381178762379/c24e2f6ff54f4a0caeedb0604f5c4ce5/artifacts/best_model_checkpoint/best_model_epoch_25.pth2imw7vn8.pth,25.0,128,
