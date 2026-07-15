@@ -88,7 +88,8 @@ def train_refinement_model(model,logger, train_loader, val_loader=None,
         mlflow.log_param("optimizer", "Adam")
         mlflow.log_param("loss_function", "MSELoss")
         mlflow.log_param("train_dataset_size", len(train_loader.dataset))
-        max_val = getattr(train_loader.dataset, 'max', None)
+        # as datasets are concatenated
+        max_val = getattr(train_loader.datasets[0], 'global_max', None)
         if max_val is not None:
             mlflow.log_param("global_max_value", max_val)
 
